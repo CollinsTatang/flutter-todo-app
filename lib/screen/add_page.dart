@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:todo_app/services/todo_service.dart';
+import 'package:todo_app/utils/error_helper.dart';
 
 class AddTodoPage extends StatefulWidget {
   final Map? todo;
@@ -65,73 +65,36 @@ class _AddTodoPageState extends State<AddTodoPage> {
   Future<void> updateData() async {
     //Get the data from form
     final todo = widget.todo;
-
     final id = todo?['_id'];
-    final title = titleController.text;
-    final description = descriptionController.text;
-    final body = {
-      "title": title,
-      "description": description,
-    };
     //submit updated data to the server
-    final url = 'https://api.nstack.in/v1/todos/$id';
-    final uri = Uri.parse(url);
-    final response = await http.put(
-      uri,
-      body: jsonEncode(body),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    if(response.statusCode == 200) {
-      showSuccessMessage('Updated Sucessfully');
+    final isSuccess = await TodoService.updateService(id, body);
+    if(isSuccess) {
+      showSuccessMessage(context, message: 'Updated Sucessfully');
     } else {
-      showFailureMessage('Failed to Update');
+      showFailureMessage(context, message: 'Failed to Update');
     }
   }
 
   Future<void> submitData() async {
-    //Get the data from form
-    final title = titleController.text;
-    final description = descriptionController.text;
-    final body = {
-        "title": title,
-        "description": description,
-        "is_completed": false
-      };
     //submit data to the server
-    const url = 'https://api.nstack.in/v1/todos';
-    final uri = Uri.parse(url);
-    final response = await http.post(
-      uri,
-      body: jsonEncode(body),
-      headers: {'Content-Type': 'application/json'},
-    );
+    final isSuccess = await TodoService.createService(body);
     //show success or fail message based on status
-    if(response.statusCode == 201) {
+      if(isSuccess) {
       titleController.text = '';
       descriptionController.text = '';
-      showSuccessMessage('Created Sucessfully');
+      showSuccessMessage(context, message: 'Created Sucessfully');
     } else {
-      showFailureMessage('Failed to Create');
+      showFailureMessage(context, message: 'Failed to Create');
     }
   }
 
-  void showSuccessMessage(String message){
-    final snackBar = SnackBar(content: Text(message,
-      style: const TextStyle(color: Colors.white),
-    ),
-      backgroundColor: Colors.green,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-  void showFailureMessage(String message){
-    final snackBar = SnackBar(
-        content: Text(message,
-       style: const TextStyle(color: Colors.white),
-    ),
-      backgroundColor: Colors.red,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  Map get body {
+    // Get the data from form
+    final title = titleController.text;
+    final description = descriptionController.text;
+    return {
+      "title": title,
+      "description": description,
+    };
   }
 }

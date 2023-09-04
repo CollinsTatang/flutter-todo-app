@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:todo_app/screen/add_page.dart';
+import 'package:todo_app/services/todo_service.dart';
+import 'package:todo_app/widget/todo_card.dart';
+import '../utils/error_helper.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -38,42 +39,18 @@ class _TodoListPageState extends State<TodoListPage> {
               ),
             ),
             child: ListView.builder(
-                itemCount: items.length,
-                padding: EdgeInsets.all(10),
-                itemBuilder: (context, index) {
-                  final item = items[index] as Map;
-                  final id = item['_id'];
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(child: Text('${index + 1}')),
-                      title: Text(item['title']),
-                      subtitle: Text(item['description']),
-                      trailing: PopupMenuButton(
-                        onSelected: (value) {
-                          if (value == 'edit'){
-                            //Open Edit Page
-                            navigateToEditPage(item);
-                          } else if (value == 'delete') {
-                            // Delete and remove the item
-                            deleteById(id);
-                          }
-                        },
-                        itemBuilder: (context) {
-                          return const [
-                            PopupMenuItem(
-                              child: Text('Edit'),
-                              value: 'edit' ,
-                            ),
-                            PopupMenuItem(
-                              child: Text('Delete'),
-                              value: 'delete',
-                            ),
-                          ];
-                        },
-                      ),
-                    ),
-                  );
-                }
+              itemCount: items.length,
+              padding: EdgeInsets.all(10),
+              itemBuilder: (context, index) {
+                final item = items[index] as Map;
+                final id = item['_id'];
+                return TodoCard(
+                  index: index,
+                  item: item,
+                  deleteById: deleteById,
+                  navigateEdit: navigateToEditPage,
+                );
+              }
             ),
           ),
         ),
@@ -110,10 +87,8 @@ class _TodoListPageState extends State<TodoListPage> {
 
   Future<void> deleteById(String id) async {
     //Delete the item
-    final url = 'https://api.nstack.in/v1/todos/$id';
-    final uri = Uri.parse(url);
-    final response = await http.delete(uri);
-    if (response.statusCode == 200) {
+    final isSuccess = await TodoService.deleteService(id);
+    if (isSuccess) {
       //Remove item from the list
      final filtered = items.where((element) => element['_id'] != id).toList();
      setState(() {
@@ -126,19 +101,16 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   Future<void> fetchTodo() async {
-    const url = 'https://api.nstack.in/v1/todos?page=1&limit=10';
-    final uri = Uri.parse(url);
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map;
-      final result = json['items'] as List;
+    final response = await TodoService.fetchService();
+    if (response != null) {
       setState(() {
-        items = result;
+        items = response;
       });
+    } else {
+      showFailureMessage(context, message: 'Something went wrong');
     }
     setState(() {
       isLoading = false;
     });
-
   }
 }
